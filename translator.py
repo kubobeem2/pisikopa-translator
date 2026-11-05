@@ -80,10 +80,48 @@ GERUND = {
     "seeing": "see", "hearing": "hear", "speaking": "speak",
     "making": "make", "stepping": "step", "crying": "cry",
     "reading": "read", "writing": "write", "running": "run",
-    "swimming": "swim", "sleeping": "sleep", "buying": "buy",
-    "selling": "sell",
+    "swimming": "swim", "sleeping": "sleep", "waking": "wake",
+    "buying": "buy", "selling": "sell",
 }
 OBJ_PRON = {"him": "pu", "her": "pu", "me": "pa", "us": "pe", "them": "po", "you": "pi", "i": "pa", "he": "pu", "she": "pu", "we": "pe", "they": "po"}
+
+# --- input normalisation (shared by the corpus, en_to_pi and
+# generate_pi.py) -----------------------------------------------
+# Lowercase, drop punctuation except ?/! (which mark question /
+# imperative and become their own tokens), expand contractions,
+# fold 3rd-person singular verbs to the base form. So
+# "You see the sea." -> "you see the sea" and
+# "He reads a book." -> "he read a book" instead of dying on OOV.
+CONTRACTIONS = {
+    "don't": "do not", "doesn't": "does not", "didn't": "did not",
+    "won't": "will not", "can't": "can not", "couldn't": "could not",
+    "wouldn't": "would not", "shouldn't": "should not",
+    "isn't": "is not", "aren't": "are not",
+}
+MORPH = {
+    "eats": "eat", "drinks": "drink", "sees": "see", "reads": "read",
+    "buys": "buy", "sells": "sell", "writes": "write", "makes": "make",
+    "goes": "go", "comes": "come", "hears": "hear", "speaks": "speak",
+    "runs": "run", "swims": "swim", "sleeps": "sleep", "wakes": "wake",
+    "steps": "step", "cries": "cry",
+}
+
+
+def normalize_en(text):
+    """Normalise English input the way the corpus is stored.
+
+    Returns lowercase text with . , ; : " ' ( ) stripped, "?" / "!"
+    split off as separate tokens, and 3rd-person singular verbs
+    folded to their base form. Unknown words are NOT mapped here:
+    they stay unknown (see the OOV note in generate_pi.py).
+    """
+    t = text.strip().lower()
+    for k, v in CONTRACTIONS.items():
+        t = t.replace(k, v)
+    t = re.sub(r'[.,;:"\'()\[\]]+', ' ', t)
+    t = t.replace('?', ' ?').replace('!', ' !')
+    t = re.sub(r'\s+', ' ', t).strip()
+    return ' '.join(MORPH.get(w, w) for w in t.split(' '))
 
 
 def _syllables(word):
@@ -153,15 +191,17 @@ def _pi_of_en(word):
 
 
 def en_to_pi(text):
-    t = text.strip()
-    is_q = t.endswith("?")
-    t = t.rstrip("?.!").strip()
-    low = t.lower()
     # --- quoted: '"I eat an apple," someone said.' -> inner clause, ev=tæ ---
+    # Checked on the raw text first: normalisation strips the quotes
+    # (the "someone said" marker fallback below covers it anyway).
     mq = re.match(r'"(.+?)",?\s+someone said\.?$', text.strip())
     if mq:
         inner = en_to_pi(mq.group(1))
         return re.sub(r"-(ta|ti|tu|te|to|tə|tæ|tɔ)(\s+lo)?$", r"-tæ\2", inner)
+    t = normalize_en(text)
+    is_q = t.endswith("?")
+    t = t.rstrip("?.!").strip()
+    low = t
     # --- heard-sound / felt templates (corpus forms) ---
     # "I heard the sound of you eating an apple." / "I felt you eating an apple."
     mt = re.match(r"i heard the sound of (\w+) (\w+ing)(?: an? (.+))?\.?$", low)
@@ -197,7 +237,7 @@ def en_to_pi(text):
         imperative = True
     first = low.split()[0] if low.split() else ""
     if _stem(first) in ("eat", "drink", "see", "read", "go", "sleep",
-                        "buy", "sell", "run", "swim", "write", "speak",
+                        "wake", "buy", "sell", "run", "swim", "write", "speak",
                         "make", "come", "hear", "step", "cry"):
         imperative = True
     # --- negation ---

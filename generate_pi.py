@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 """pisikopa.modoki を読み、英語プロンプトから Pisikopa を貪欲生成する。
 
-単語レベル: プロンプトは空白区切りで語彙と照合する。語彙にない単語があると
-エラーで一覧を出す (学習データにない単語は生成できない、という実験上の制限)。
+単語レベル: プロンプトは空白区切りで語彙と照合する。プロンプトは
+translator.normalize_en で正規化される（小文字化、句読点除去、
+三人称単数 -> 原形）。正規化後も語彙にない単語があるとエラーで
+一覧を出す (学習データにない単語は生成できない、という実験上の
+制限。未知語の Pisikopa 語は translator.py vec で最近傍を調べる)。
 modoki.py のパーサ / forward を流用し、トークナイザだけ単語版に差し替えた。
 
 使い方:
@@ -20,15 +23,23 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import numpy as np  # noqa: E402
 
 from modoki import forward, parse_modoki, softmax  # noqa: E402
+from translator import normalize_en  # noqa: E402
 
 
 def generate(m, prompt, tokens=10, temp=0.0, seed=0):
     vocab = m["vocab"]
     idx = {t: i for i, t in enumerate(vocab)}
+    # Normalise the prompt the same way the corpus is stored:
+    # lowercase, punctuation stripped ("You" -> "you", "sea." -> "sea",
+    # "reads" -> "read"). What is still unknown after this is a
+    # genuinely unknown word, not a surface variant.
+    prompt = normalize_en(prompt)
     words = prompt.split(" ")
     unknown = [w for w in words if w not in idx]
     if unknown:
-        raise ValueError(f"語彙にない単語: {unknown}")
+        raise ValueError(
+            f"語彙にない単語: {unknown}（正規化済み。未知語は生成できません。"
+            "translator.py vec <単語> で一番近い Pisikopa 語を確認してください）")
     ids = [idx["<bos>"]] + [idx[w] for w in words]
     rng = np.random.default_rng(seed)
     out = list(ids)

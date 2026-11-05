@@ -28,6 +28,14 @@ EN_PI = [
     ("I saw that he eats an apple", "ka pu ra-ta læ pa ro-ta"),
     ("I saw him stepping on a banana and crying",
      "kasæ pu moru-ta pu məso-ta læ pa ro-ta"),
+    # normalisation (v0.3): capitals / trailing punctuation / 3rd-person -s
+    ("You see the sea.", "si pi ro-ta"),
+    ("He reads a book.", "kæ pu kæro-ta"),
+    ("She sells a banana.", "kasæ pu kuro-ta"),
+    ("They sell a banana.", "kasæ po kuro-ta"),
+    ("I see red.", "sæko pa ro-ta"),
+    ("She doesn't eat a banana.", "kasæ pu mæ ra-ta"),
+    ('"I eat an apple," someone said.', "ka pa ra-tæ"),
 ]
 PI_EN = [
     ("ka pa ra-ta", "I eat apple (saw)"),

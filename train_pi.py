@@ -78,6 +78,8 @@ def main():
     ap.add_argument("--lr", type=float, default=0.005)
     ap.add_argument("--d", type=int, default=48)
     ap.add_argument("--layers", type=int, default=2)
+    ap.add_argument("--dff", type=int, default=96)
+    ap.add_argument("--heads", type=int, default=3)
     ap.add_argument("--seed", type=int, default=0)
     args = ap.parse_args()
 
@@ -85,10 +87,10 @@ def main():
     V, pad = len(vocab), idx["<pad>"]
     max_len = max(len(s) for s in seqs)
     print(f"ペア数: {len(seqs)}, 語彙数: {V}, 最大長: {max_len} トークン")
-    print(f"d_model={args.d}, n_layer={args.layers}, steps={args.steps}, lr={args.lr}")
+    print(f"d_model={args.d}, n_layer={args.layers}, n_head={args.heads}, d_ff={args.dff}, steps={args.steps}, lr={args.lr}")
 
-    net = Net(V, d=args.d, n_layer=args.layers, n_head=3, d_ff=96,
-              max_len=64, seed=args.seed)
+    net = Net(V, d=args.d, n_layer=args.layers, n_head=args.heads,
+              d_ff=args.dff, max_len=64, seed=args.seed)
     P = net.P
     mt = {k: np.zeros_like(v) for k, v in P.items()}
     vt = {k: np.zeros_like(v) for k, v in P.items()}
